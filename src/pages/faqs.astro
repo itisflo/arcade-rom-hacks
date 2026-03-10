@@ -24,7 +24,7 @@ import ThemeToggle from "../components/ThemeToggle.astro";
         <ThemeToggle />
       </div>
       <p class="muted">Frequently asked questions about ROM hacks and how to use this site.</p>
-      <a href="/" class="back-link">← Back to ROM Hacks</a>
+      <a href={import.meta.env.BASE_URL} class="back-link">← Back to ROM Hacks</a>
     </header>
 
     <main id="main-content">
@@ -166,7 +166,7 @@ import ThemeToggle from "../components/ThemeToggle.astro";
     </main>
 
     <footer class="page-footer">
-      <a href="/">← Back to ROM Hacks</a>
+      <a href={import.meta.env.BASE_URL}>← Back to ROM Hacks</a>
       <a href="#top">↑ Back to top</a>
     </footer>
   </body>
