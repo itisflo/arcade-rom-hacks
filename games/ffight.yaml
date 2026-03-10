@@ -4,7 +4,7 @@ year: 1989
 system: CPS
 
 roms:
-  interleave: 16-bit
+  layout: 16-bit-interleaved
   regions:
     - base: 0x000000
       size: 0x20000

@@ -226,6 +226,12 @@ const { gameId, roms, hacks } = Astro.props;
     font-weight: 600;
     transition: opacity 0.15s;
   }
+  @media (prefers-color-scheme: dark) {
+    .download-link {
+      background: #15803d;
+      color: #dcfce7;
+    }
+  }
   .download-link:hover {
     opacity: 0.85;
     text-decoration: none;

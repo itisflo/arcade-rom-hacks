@@ -1,0 +1,33 @@
+name:  Knights of the Round (World 911127)
+manufacturer: Capcom
+year: 1991
+system: CPS
+
+roms:
+  layout: 16-bit-word-swap
+  regions:
+    - base: 0x000000
+      size: 0x80000
+      file: { name: kr_23e.8f, crc32: 0x1B3997EB }
+    - base: 0x080000
+      size: 0x80000
+      file: { name: kr_22.7f,  crc32: 0xD0B671A9 }
+
+hacks:
+
+  - description: Hide “Insert Coin” flashing message in-game
+    memory:
+      - address: 0x00BB24
+        value: 0x4E75
+
+  - description: Remove "Go" flashing notification and sound in-game
+    memory:
+      - address: 0x010A70
+        value: 0x4E75
+  
+  - description: Remove timer tick sound
+    memory:
+      - address: 0x01098C
+        value: 0x4E71
+      - address: 0x01098E
+        value: 0x4E71

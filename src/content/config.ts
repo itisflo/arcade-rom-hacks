@@ -9,8 +9,9 @@ const romFile = z.object({
 const region = z.object({
   base: z.number(),
   size: z.number(),
-  high_byte: romFile,
-  low_byte: romFile,
+  high_byte: romFile.optional(),
+  low_byte: romFile.optional(),
+  file: romFile.optional(),
 });
 
 const games = defineCollection({
@@ -21,7 +22,7 @@ const games = defineCollection({
     year: z.number(),
     system: z.string(),
     roms: z.object({
-      interleave: z.enum(['16-bit']),
+      layout: z.enum(['16-bit-interleaved', '16-bit-word-swap']),
       regions: z.array(region),
     }).optional(),
     hacks: z.array(z.object({

@@ -9,15 +9,20 @@ export interface RomFile {
 
 export interface RomRegion {
   base: number;
-  /** Byte size of each individual ROM file.
-   *  For 16-bit interleave the address range covered is [base, base + size*2). */
+  /** Byte size of the ROM file(s).
+   *  For 16-bit interleave:      address range is [base, base + size*2).
+   *  For 16-bit-word-swap:       address range is [base, base + size). */
   size: number;
-  high_byte: RomFile;
-  low_byte: RomFile;
+  /** 16-bit interleave (ROM_LOAD16_BYTE): even-address bytes. */
+  high_byte?: RomFile;
+  /** 16-bit interleave (ROM_LOAD16_BYTE): odd-address bytes. */
+  low_byte?: RomFile;
+  /** 16-bit word-swap (ROM_LOAD16_WORD_SWAP): single file, bytes swapped per word. */
+  file?: RomFile;
 }
 
 export interface RomLayout {
-  interleave: string;
+  layout: string;
   regions: RomRegion[];
 }
 
@@ -46,7 +51,10 @@ export function verifyCRCs(
   files: Record<string, Uint8Array>,
 ): void {
   for (const region of regions) {
-    for (const romFile of [region.high_byte, region.low_byte]) {
+    const romFiles = region.file
+      ? [region.file]
+      : [region.high_byte!, region.low_byte!];
+    for (const romFile of romFiles) {
       const data = files[romFile.name];
       if (!data) throw new Error(`Missing ROM file: ${romFile.name}`);
 
@@ -66,15 +74,17 @@ export function verifyCRCs(
 
 /**
  * Converts the selected hacks' memory addresses into concrete byte patches.
- * Only supports 16-bit interleaved regions (high_byte / low_byte).
+ * Supports both 16-bit interleave (ROM_LOAD16_BYTE) and 16-bit-word-swap (ROM_LOAD16_WORD_SWAP).
  */
 export function resolveHackPatches(
   roms: RomLayout,
   hacks: Hack[],
   enabledIndices: Set<number>,
 ): BytePatch[] {
-  if (roms.interleave !== '16-bit') {
-    throw new Error(`Unsupported ROM interleave: ${roms.interleave}`);
+  const is16bit     = roms.layout === '16-bit-interleaved';
+  const isWordSwap  = roms.layout === '16-bit-word-swap';
+  if (!is16bit && !isWordSwap) {
+    throw new Error(`Unsupported ROM layout: ${roms.layout}`);
   }
 
   const patches: BytePatch[] = [];
@@ -83,8 +93,9 @@ export function resolveHackPatches(
     if (!enabledIndices.has(i) || !hack.memory) continue;
 
     for (const { address, value } of hack.memory) {
+      const virtualSize = (r: RomRegion) => is16bit ? r.size * 2 : r.size;
       const region = roms.regions.find(
-        r => address >= r.base && address < r.base + r.size * 2,
+        r => address >= r.base && address < r.base + virtualSize(r),
       );
       if (!region) {
         throw new Error(
@@ -92,10 +103,17 @@ export function resolveHackPatches(
         );
       }
 
-      // 16-bit interleave: word at address A is split across two files at offset A/2
-      const offset = (address - region.base) / 2;
-      patches.push({ file: region.high_byte.name, offset, value: (value >> 8) & 0xff });
-      patches.push({ file: region.low_byte.name, offset, value: value & 0xff });
+      if (is16bit) {
+        // Two files: each stores every other byte at offset = (addr - base) / 2
+        const offset = (address - region.base) / 2;
+        patches.push({ file: region.high_byte!.name, offset, value: (value >> 8) & 0xff });
+        patches.push({ file: region.low_byte!.name,  offset, value: value & 0xff });
+      } else {
+        // Single file, word-swapped: low byte at even offset, high byte at odd offset
+        const offset = address - region.base;
+        patches.push({ file: region.file!.name, offset: offset,     value: value & 0xff });
+        patches.push({ file: region.file!.name, offset: offset + 1, value: (value >> 8) & 0xff });
+      }
     }
   }
 

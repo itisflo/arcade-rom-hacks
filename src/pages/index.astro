@@ -158,6 +158,18 @@ for (const urls of Object.values(snapshotsByGame)) urls.sort();
     padding: 0.5rem 0;
   }
 
+  @media (max-width: 640px) {
+    .alpha-nav {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .alpha-nav::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
   .alpha-letter {
     display: inline-flex;
     align-items: center;
