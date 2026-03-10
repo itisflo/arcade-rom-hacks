@@ -1,0 +1,233 @@
+---
+import type { RomLayout, Hack } from "../lib/patcher";
+
+interface Props {
+  gameId: string;
+  roms: RomLayout;
+  hacks: Hack[];
+}
+
+const { gameId, roms, hacks } = Astro.props;
+---
+
+<div class="rom-patcher" data-game={JSON.stringify({ roms, hacks })}>
+  {/* ── Drop zone ──────────────────────────────────────────────────── */}
+  <div
+    class="drop-zone"
+    data-state="idle"
+    role="button"
+    tabindex="0"
+    aria-label={`Drop ${gameId}.zip here or click to browse`}
+  >
+    <input type="file" accept=".zip" hidden aria-hidden="true" />
+    <span class="drop-icon" aria-hidden="true">⬇</span>
+    <p class="drop-label">
+      Drop <code>{gameId}.zip</code> here
+      <span class="drop-sub">or click to browse</span>
+    </p>
+    <p class="drop-processing" aria-live="polite">Processing…</p>
+  </div>
+
+  <button class="patch-btn" disabled>Patch ROM</button>
+
+  {/* ── Download (hidden until patching succeeds) ──────────────────── */}
+  <section class="download-section" hidden>
+    <a class="download-link">Download patched ROM</a>
+  </section>
+
+  {/* ── Status ─────────────────────────────────────────────────────── */}
+  <p class="status" aria-live="polite" hidden></p>
+</div>
+
+{
+  /*
+  Single deduplicated script: Astro runs this once even if multiple
+  RomPatcher components exist on the page. We iterate over all instances.
+*/
+}
+<script>
+  type InitFn = (file: File, root: HTMLElement) => Promise<void>;
+  let patcherInit: InitFn | null = null;
+
+  async function handleFile(file: File, root: HTMLElement) {
+    if (!patcherInit) {
+      const mod = await import("./patcher-ui");
+      patcherInit = mod.init;
+    }
+    await patcherInit(file, root);
+  }
+
+  function wireInstance(root: HTMLElement) {
+    const zone = root.querySelector<HTMLElement>(".drop-zone")!;
+    const fileInput =
+      root.querySelector<HTMLInputElement>('input[type="file"]')!;
+
+    zone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      zone.dataset.state = "hover";
+    });
+    zone.addEventListener("dragleave", () => {
+      zone.dataset.state = "idle";
+    });
+    zone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      zone.dataset.state = "idle";
+      const file = e.dataTransfer?.files[0];
+      if (file) handleFile(file, root);
+    });
+    zone.addEventListener("click", () => fileInput.click());
+    zone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") fileInput.click();
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files?.[0]) handleFile(fileInput.files[0], root);
+    });
+  }
+
+  document.querySelectorAll<HTMLElement>(".rom-patcher").forEach(wireInstance);
+</script>
+
+<style>
+  .rom-patcher {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* ── Drop zone ───────────────────────────────────────────────────── */
+  .drop-zone {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    cursor: pointer;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
+    outline: none;
+  }
+  .drop-zone:focus-visible {
+    border-color: var(--accent);
+  }
+  .drop-zone[data-state="hover"] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--bg) 88%, var(--accent));
+  }
+  .drop-zone[data-state="ok"] {
+    border-color: var(--ok, #22c55e);
+    border-style: solid;
+    background: color-mix(in srgb, var(--ok, #22c55e) 12%, var(--bg));
+  }
+  .drop-zone[data-state="error"] {
+    border-color: var(--err);
+    border-style: solid;
+  }
+  .drop-zone[data-state="loading"] {
+    border-style: solid;
+    cursor: wait;
+    pointer-events: none;
+    animation: pulse-border 1s ease-in-out infinite;
+  }
+  .drop-zone[data-state="loading"] .drop-label,
+  .drop-zone[data-state="loading"] .drop-icon,
+  .drop-zone[data-state="ok"] .drop-icon {
+    display: none;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { border-color: var(--border); }
+    50%       { border-color: var(--accent); }
+  }
+
+  .drop-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+  .drop-label {
+    font-size: 0.9rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .drop-label code {
+    color: var(--accent);
+  }
+  .drop-processing {
+    display: none;
+    font-size: 0.9rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .drop-zone[data-state="loading"] .drop-processing {
+    display: block;
+  }
+
+  .drop-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  /* ── Patch button ────────────────────────────────────────────────── */
+  .patch-btn {
+    font-family: inherit;
+    font-size: 0.875rem;
+    padding: 0.45rem 1.1rem;
+    background: var(--accent);
+    color: var(--accent-fg);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.15s;
+  }
+  .patch-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .patch-btn[data-state="loading"] {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  .patch-btn[data-state="loading"]::after {
+    content: ' …';
+  }
+  .patch-btn:not(:disabled):hover {
+    opacity: 0.85;
+  }
+
+  /* ── Status ──────────────────────────────────────────────────────── */
+  .status {
+    font-size: 0.82rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .status[data-type="ok"] {
+    color: var(--ok);
+  }
+  .status[data-type="error"] {
+    color: var(--err);
+  }
+
+  /* ── Download ────────────────────────────────────────────────────── */
+  .download-link {
+    display: inline-block;
+    font-size: 0.875rem;
+    padding: 0.45rem 1.1rem;
+    border: none;
+    border-radius: 6px;
+    background: var(--ok, #22c55e);
+    color: #fff;
+    font-weight: 600;
+    transition: opacity 0.15s;
+  }
+  .download-link:hover {
+    opacity: 0.85;
+    text-decoration: none;
+  }
+</style>

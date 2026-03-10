@@ -1,0 +1,49 @@
+---
+---
+<button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"></button>
+
+<script>
+  const btn  = document.getElementById('theme-toggle') as HTMLButtonElement;
+  const root = document.documentElement;
+
+  function current(): 'dark' | 'light' {
+    if (root.dataset.theme === 'light') return 'light';
+    if (root.dataset.theme === 'dark')  return 'dark';
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+
+  function syncButton(theme: 'dark' | 'light') {
+    btn.textContent = theme === 'dark' ? '☀' : '☾';
+    const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+  }
+
+  btn.addEventListener('click', () => {
+    const next = current() === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    localStorage.setItem('theme', next);
+    syncButton(next);
+  });
+
+  syncButton(current());
+</script>
+
+<style>
+  .theme-toggle {
+    font-family: inherit;
+    font-size: 1rem;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0.2rem 0.55rem;
+    line-height: 1;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .theme-toggle:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+</style>

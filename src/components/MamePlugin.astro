@@ -1,0 +1,100 @@
+---
+import type { Hack } from "../lib/patcher";
+
+interface Props {
+  gameId: string;
+  gameName: string;
+  hacks: Hack[];
+}
+
+const { gameId, gameName, hacks } = Astro.props;
+---
+
+<div
+  class="mame-plugin"
+  data-game-id={gameId}
+  data-game-name={gameName}
+  data-hacks={JSON.stringify(hacks)}
+>
+  <button class="download-btn" disabled>Download hacks as MAME Plugin</button>
+
+  <p class="hint">
+    Extract into your MAME <code>plugins/</code> folder, selected hacks will be enabled
+    by default. You can disable them in the mame plugin menu.
+  </p>
+</div>
+
+<script>
+  function wireInstance(root: HTMLElement) {
+    const btn = root.querySelector<HTMLButtonElement>(".download-btn")!;
+    const scope = root.closest<HTMLElement>(".game-patchers") ?? root;
+
+    const getCheckboxes = () => [
+      ...scope.querySelectorAll<HTMLInputElement>('input.hack-checkbox'),
+    ];
+
+    const syncBtn = () => {
+      btn.disabled = getCheckboxes().every((cb) => !cb.checked);
+    };
+
+    // Sync now and on every change
+    syncBtn();
+    scope.addEventListener("change", syncBtn);
+
+    btn.addEventListener("click", async () => {
+      const gameId = root.dataset.gameId!;
+      const gameName = root.dataset.gameName!;
+      const hacks = JSON.parse(root.dataset.hacks!);
+
+      const enabledIndices = new Set<number>(
+        getCheckboxes()
+          .filter((cb) => cb.checked)
+          .map((cb) => Number(cb.value)),
+      );
+
+      const { downloadMamePlugin } = await import("./mame-plugin-ui");
+      downloadMamePlugin(gameId, gameName, hacks, enabledIndices);
+    });
+  }
+
+  document.querySelectorAll<HTMLElement>(".mame-plugin").forEach(wireInstance);
+</script>
+
+<style>
+  .mame-plugin {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* ── Button ──────────────────────────────────────────────────────── */
+  .download-btn {
+    font-family: inherit;
+    font-size: 0.875rem;
+    padding: 0.45rem 1.1rem;
+    background: var(--accent);
+    color: var(--accent-fg);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.15s;
+    align-self: flex-start;
+  }
+  .download-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .download-btn:not(:disabled):hover {
+    opacity: 0.85;
+  }
+
+  /* ── Hint ────────────────────────────────────────────────────────── */
+  .hint {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .hint code {
+    color: var(--accent);
+  }
+</style>

@@ -1,0 +1,28 @@
+name:  Final Fight (World, set 1)
+manufacturer: Capcom
+year: 1989
+system: CPS
+
+roms:
+  interleave: 16-bit
+  regions:
+    - base: 0x000000
+      size: 0x20000
+      high_byte: { name: ff_36.11f,    crc32: 0xF9A5CE83 }
+      low_byte:  { name: ff_42.11h,    crc32: 0x65F11215 }
+    - base: 0x040000
+      size: 0x20000
+      high_byte: { name: ff_37.12f,    crc32: 0xE1033784 }
+      low_byte:  { name: ffe_43.12h,   crc32: 0x995E968A }
+
+hacks:
+
+  - description: Hide “Insert Coin” flashing message in-game
+    memory:
+      - address: 0x016044
+        value: 0x6008
+
+  - description: Remove "Go" flashing notification and sound in-game
+    memory:
+      - address: 0x061450
+        value: 0x6012

@@ -1,0 +1,310 @@
+---
+import { getCollection } from "astro:content";
+import "../styles/global.css";
+import RomPatcher from "../components/RomPatcher.astro";
+import MamePlugin from "../components/MamePlugin.astro";
+import HackSelector from "../components/HackSelector.astro";
+import ThemeToggle from "../components/ThemeToggle.astro";
+
+const games = await getCollection("games");
+games.sort((a, b) => a.data.name.localeCompare(b.data.name));
+
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const firstGameForLetter: Record<string, number> = {};
+for (const [i, game] of games.entries()) {
+  const letter = game.data.name[0].toUpperCase();
+  if (!(letter in firstGameForLetter)) firstGameForLetter[letter] = i;
+}
+
+// Build map of gameId -> sorted public snapshot URLs
+const snapshotPaths = Object.keys(import.meta.glob("/public/snapshots/*.png"));
+const snapshotsByGame: Record<string, string[]> = {};
+for (const p of snapshotPaths) {
+  const filename = p.split("/").pop()!;
+  const id = filename.replace(/\d*\.png$/, "");
+  if (!id) continue;
+  (snapshotsByGame[id] ??= []).push(`/snapshots/${filename}`);
+}
+for (const urls of Object.values(snapshotsByGame)) urls.sort();
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>ROM Hacks</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🕹️</text></svg>" />
+    <meta name="description" content="A collection of arcade ROM patches — apply hacks directly in your browser or generate MAME Lua plugins." />
+    {/* Restore saved theme before first paint to avoid flash */}
+    <script is:inline>
+      const t = localStorage.getItem("theme");
+      if (t === "light" || t === "dark")
+        document.documentElement.dataset.theme = t;
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header>
+      <div class="header-row">
+        <h1>Arcade ROM Hacks</h1>
+        <ThemeToggle />
+      </div>
+      <p>A collection of various arcade ROM patches.</p>
+      <a href="/faqs" class="help-link">
+        How to use and frequently asked questions.
+      </a>
+    </header>
+
+    <main id="main-content">
+      <nav class="alpha-nav" aria-label="Alphabet index">
+        {
+          alphabet.map((letter) => {
+            const active = letter in firstGameForLetter;
+            return active ? (
+              <a class="alpha-letter" href={`#letter-${letter}`}>
+                {letter}
+              </a>
+            ) : (
+              <span class="alpha-letter alpha-letter--disabled">{letter}</span>
+            );
+          })
+        }
+      </nav>
+
+      <ul class="game-list">
+        {
+          games.map((game, i) => {
+            const { name, manufacturer, year, system, hacks, roms } = game.data;
+            const canPatch = !!roms && !!hacks?.length;
+            const memoryHacks = hacks?.filter((h) => h.memory?.length) ?? [];
+            const letter = name[0].toUpperCase();
+            const isFirstForLetter = firstGameForLetter[letter] === i;
+            return (
+              <li
+                class="game-card"
+                id={isFirstForLetter ? `letter-${letter}` : undefined}
+              >
+                <div class="game-header">
+                  <h2 class="game-name">{name}</h2>
+                  <span class="game-meta">
+                    {manufacturer} · {year} · {system}
+                  </span>
+                </div>
+
+                {snapshotsByGame[game.id]?.length && (
+                  <div class="snapshots">
+                    {snapshotsByGame[game.id].map((url) => (
+                      <img
+                        class="snapshot"
+                        src={url}
+                        alt={`${name} screenshot`}
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {hacks?.length ? (
+                  <div class="game-patchers">
+                    <HackSelector gameId={game.id} hacks={hacks} />
+                    <div class="patchers-row">
+                      {canPatch && (
+                        <RomPatcher
+                          gameId={game.id}
+                          roms={roms!}
+                          hacks={hacks}
+                        />
+                      )}
+                      {memoryHacks.length > 0 && (
+                        <MamePlugin
+                          gameId={game.id}
+                          gameName={name}
+                          hacks={hacks}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p class="no-patch">No patch available yet.</p>
+                )}
+              </li>
+            );
+          })
+        }
+      </ul>
+    </main>
+  </body>
+</html>
+
+<style>
+  .help-link {
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+  }
+
+  .alpha-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    padding: 0.5rem 0;
+  }
+
+  .alpha-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+    background: var(--surface);
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .alpha-letter:hover {
+    background: var(--accent, #4f8ef7);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .alpha-letter--disabled {
+    color: var(--muted);
+    background: transparent;
+    border-color: transparent;
+    cursor: default;
+  }
+
+  .alpha-letter--disabled:hover {
+    background: transparent;
+    color: var(--muted);
+    border-color: transparent;
+  }
+
+  .game-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .game-card {
+    padding: 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .game-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .game-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: 0;
+    margin-bottom: 0;
+  }
+
+  .game-meta {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .snapshots {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .snapshot {
+    width: 15rem;
+    aspect-ratio: 4 / 3;
+    object-fit: fill;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .game-patchers {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .patchers-row {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+  }
+  .patchers-row > :global(*) {
+    flex: 1;
+    min-width: 0;
+  }
+  .patchers-row > :global(* + *) {
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--border);
+    position: relative;
+  }
+  .patchers-row > :global(* + *)::before {
+    content: "or";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.4rem;
+    line-height: 1;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  @media (max-width: 600px) {
+    .patchers-row {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .patchers-row > :global(* + *) {
+      padding-left: 0;
+      padding-top: 1.5rem;
+      border-left: none;
+      border-top: 1px solid var(--border);
+    }
+    .patchers-row > :global(* + *)::before {
+      left: 50%;
+      top: 0;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  .no-patch {
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+</style>

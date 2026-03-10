@@ -1,0 +1,291 @@
+---
+import "../styles/global.css";
+import ThemeToggle from "../components/ThemeToggle.astro";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>FAQ — ROM Hacks</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🕹️</text></svg>" />
+    <meta name="description" content="Frequently asked questions about ROM hacks and how to use the browser-based patcher and MAME Lua plugin generator." />
+    <script is:inline>
+      const t = localStorage.getItem("theme");
+      if (t === "light" || t === "dark")
+        document.documentElement.dataset.theme = t;
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header>
+      <div class="header-row">
+        <h1>Frequently Asked Questions</h1>
+        <ThemeToggle />
+      </div>
+      <p class="muted">Frequently asked questions about ROM hacks and how to use this site.</p>
+      <a href="/" class="back-link">← Back to ROM Hacks</a>
+    </header>
+
+    <main id="main-content">
+      <nav class="toc" aria-label="Table of contents">
+        <ol>
+          <li><a href="#what-is-a-rom-hack">What is a ROM hack?</a></li>
+          <li><a href="#which-romset">Which ROM set is supported?</a></li>
+          <li><a href="#how-to-patch">How do I patch a ROM?</a></li>
+          <li><a href="#run-patched-rom">How do I run a patched ROM in MAME?</a></li>
+          <li><a href="#mame-plugin">How do I use hacks without patching the ROM?</a></li>
+        </ol>
+      </nav>
+
+      <div class="faq">
+        <section class="faq-item" id="what-is-a-rom-hack">
+          <h2 class="faq-question">What is a ROM hack?</h2>
+          <div class="faq-answer">
+            <p>
+              A ROM hack is a modified version of a game's read-only memory
+              (ROM) dump. Hobbyists and enthusiasts reverse-engineer the
+              original binary and apply patches that change gameplay,
+              difficulty, graphics, sounds, or other aspects of the game.
+            </p>
+            <p>
+              For arcade games specifically, hacks typically target things like
+              difficulty balancing, region-specific censorship removal, score or
+              timer tweaks, or quality-of-life improvements that the original
+              developers never shipped.
+            </p>
+          </div>
+        </section>
+
+        <section class="faq-item" id="which-romset">
+          <h2 class="faq-question">Which ROM set is supported?</h2>
+          <div class="faq-answer">
+            <p>
+              This site targets the <strong>MAME non-merged ROM set</strong>. In
+              a non-merged set every game ships as a self-contained ZIP that
+              includes all the files it needs — parent and clone ROMs alike — so
+              you don't need a separate parent archive to run a clone.
+            </p>
+            <p>
+              Other ROM sets (merged, split) may work but are not guaranteed to.
+              If the patcher reports a CRC mismatch, switch to a non-merged set.
+            </p>
+          </div>
+        </section>
+
+        <section class="faq-item" id="how-to-patch">
+          <h2 class="faq-question">How do I patch a ROM?</h2>
+          <div class="faq-answer">
+            <p>
+              Find the game in the list and check the hacks you want to apply — each
+              game shows a list of checkboxes, and you can toggle any combination of
+              hacks. Then load your ROM using one of two methods:
+            </p>
+            <ul>
+              <li>
+                <strong>Drag and drop</strong> — drag your ROM ZIP onto the patch area.
+              </li>
+              <li>
+                <strong>File picker</strong> — click <em>Select ROM</em> and choose
+                your ZIP file.
+              </li>
+            </ul>
+            <p>
+              In both cases, click the <em>Patch</em> button to generate and download
+              the patched ZIP. Your original file is never modified.
+            </p>
+          </div>
+        </section>
+
+        <section class="faq-item" id="run-patched-rom">
+          <h2 class="faq-question">How do I run a patched ROM in MAME?</h2>
+          <div class="faq-answer">
+            <p>
+              You must launch the patched ROM from the <strong
+                >command line</strong
+              >. MAME's built-in UI performs a CRC integrity check against its
+              internal database and will refuse to start any ROM whose checksums
+              don't match — which is exactly the case for a patched file.
+            </p>
+            <p>Place your patched ZIP in a folder of your choice, then run:</p>
+            <pre><code>mame -rompath /path/to/your/roms &lt;romname&gt;</code></pre>
+            <p>
+              Replace <code>/path/to/your/roms</code> with the folder containing your
+              patched ZIP and <code>&lt;romname&gt;</code> with the ZIP filename without
+              the extension (e.g. <code>ffight</code>). The <code>-rompath</code
+              > flag tells MAME where to look without touching your main ROM directory.
+            </p>
+          </div>
+        </section>
+
+        <section class="faq-item" id="mame-plugin">
+          <h2 class="faq-question">
+            How do I use hacks without patching the ROM?
+          </h2>
+          <div class="faq-answer">
+            <p>
+              Hacks on this site are available as a <strong
+                >MAME Lua plugin</strong
+              >
+              instead of a ROM patch. The plugin applies changes to the game's live
+              memory at runtime, so your original ROM files are never modified and
+              keep passing MAME's CRC check.
+            </p>
+            <p>To use a plugin:</p>
+            <ol>
+              <li>
+                Click <em>Generate plugin</em> on the game's entry and download the
+                <code>.zip</code> file.
+              </li>
+              <li>
+                Extract it into MAME's <code>plugins/</code> folder so the structure
+                looks like
+                <code>plugins/&lt;plugin-name&gt;/plugin.json</code>.
+              </li>
+              <li>
+                Enable plugins in MAME — either through the in-game menu (<kbd
+                  >Tab</kbd
+                > → Plugin Options) or by adding
+                <code>-plugins -plugin &lt;plugin-name&gt;</code> to your command
+                line.
+              </li>
+              <li>
+                Launch the game normally. The plugin loads automatically and
+                patches memory on the fly each time you play.
+              </li>
+            </ol>
+            <p>
+              The plugin approach is ideal when you want to keep your ROM set
+              untouched or switch hacks on and off without managing multiple ROM
+              files.
+            </p>
+          </div>
+        </section>
+      </div>
+
+    </main>
+
+    <footer class="page-footer">
+      <a href="/">← Back to ROM Hacks</a>
+      <a href="#top">↑ Back to top</a>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .back-link {
+    font-size: 0.85rem;
+    display: inline-block;
+    margin-top: 0.4rem;
+  }
+
+  .toc {
+    margin-bottom: 2rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+  }
+
+  .toc ol {
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0;
+  }
+
+  .toc li {
+    font-size: 0.95rem;
+  }
+
+  .page-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2.5rem;
+    font-size: 0.9rem;
+  }
+
+  .faq {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .faq-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .faq-item:first-child {
+    border-top: 1px solid var(--border);
+  }
+
+  .faq-question {
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text);
+    margin-bottom: 0;
+  }
+
+  .faq-answer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    font-size: 0.88rem;
+    color: var(--text);
+  }
+
+  .faq-answer p {
+    line-height: 1.7;
+  }
+
+  .faq-answer strong {
+    color: var(--text);
+  }
+
+  .faq-answer pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+  }
+
+  .faq-answer code {
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: var(--ok);
+  }
+
+  .faq-answer pre code {
+    color: var(--ok);
+  }
+
+  .faq-answer ul,
+  .faq-answer ol {
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .faq-answer li {
+    line-height: 1.7;
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.8rem;
+    background: var(--bg);
+    color: var(--text);
+  }
+</style>
