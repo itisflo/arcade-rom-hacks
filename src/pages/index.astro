@@ -5,6 +5,8 @@ import RomPatcher from "../components/RomPatcher.astro";
 import MamePlugin from "../components/MamePlugin.astro";
 import HackSelector from "../components/HackSelector.astro";
 import ThemeToggle from "../components/ThemeToggle.astro";
+import { readdirSync } from "fs";
+import { join } from "path";
 
 const games = await getCollection("games");
 games.sort((a, b) => a.data.name.localeCompare(b.data.name));
@@ -17,13 +19,12 @@ for (const [i, game] of games.entries()) {
 }
 
 // Build map of gameId -> sorted public snapshot URLs
-const snapshotPaths = Object.keys(import.meta.glob("/public/snapshots/*.png"));
+const snapshotFiles = readdirSync(join(process.cwd(), "public/snapshots")).filter((f) => f.endsWith(".png"));
 const snapshotsByGame: Record<string, string[]> = {};
-for (const p of snapshotPaths) {
-  const filename = p.split("/").pop()!;
+for (const filename of snapshotFiles) {
   const id = filename.replace(/\d*\.png$/, "");
   if (!id) continue;
-  (snapshotsByGame[id] ??= []).push(`${import.meta.env.BASE_URL}snapshots/${filename}`);
+  (snapshotsByGame[id] ??= []).push(`${import.meta.env.BASE_URL}/snapshots/${filename}`);
 }
 for (const urls of Object.values(snapshotsByGame)) urls.sort();
 ---
